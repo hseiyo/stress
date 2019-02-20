@@ -23,6 +23,30 @@ cpu_stress()
   done
 }
 
+memory_stress()
+{
+  MEMDIR=.stress
+  TIMEOUT=$1
+  shift
+  SIZE=$1
+  shift
+  if [ ! -x ${MEMDIR} ]
+  then
+    mkdir ${MEMDIR}
+    mount -t tmpfs /dev/shm ${MEMDIR} -o size=$SIZE && echo "mount done"
+    dd if=/dev/zero of=.stress/stress iflag=fullblock bs=$( echo $SIZE | cut -c1-$( expr $(echo $SIZE | wc -c) - 6 )  )M count=10 > /dev/null 2>&1
+    echo "dd done"
+  else
+    echo "FATAL: ${MEMDIR} directory is already exists! exited."
+    exit 1
+  fi
+  sleep ${TIMEOUT}
+  umount ${MEMDIR} || ( echo "ERROR: umount ${MEMDIR} failed."; exit 1 )
+  rmdir ${MEMDIR} || ( echo "ERROR: rmdir ${MEMDIR} failed."; exit 1 )
+
+}
+
+
 
 main()
 {
@@ -56,10 +80,13 @@ main()
       ;;
     "-m")
       TOTALMEM=$( cat /proc/meminfo | grep MemTotal: | egrep -o "[0-9]+" ) # in kilo byte
-      echo $( expr ${TOTALMEM} / 100 \* ${PERCENTAGE} )K | tee /sys/fs/cgroup/memory/$UUID/memory.limit_in_bytes
-      echo $$ | tee /sys/fs/cgroup/memory/$UUID/cgroup.procs
-      memory_stress $SEC ${PERCENTAGE} &
+      MAXUSEMEM=$( expr ${TOTALMEM} / 100 \* ${PERCENTAGE} )K
+      echo ${MAXUSEMEM} | tee /sys/fs/cgroup/memory/$UUID/memory.limit_in_bytes
+      echo $$ | tee /sys/fs/cgroup/memory/$UUID/tasks
+      memory_stress $SEC ${MAXUSEMEM} &
       vmstat 1 $(( $SEC + 2 ))
+      wait
+      echo "done"
       ;;
     *)
       usage
