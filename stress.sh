@@ -25,24 +25,12 @@ cpu_stress()
 
 memory_stress()
 {
-  MEMDIR=.stress
   TIMEOUT=$1
   shift
   SIZE=$1
   shift
-  if [ ! -x ${MEMDIR} ]
-  then
-    mkdir ${MEMDIR}
-    mount -t tmpfs /dev/shm ${MEMDIR} -o size=$SIZE && echo "mount done"
-    dd if=/dev/zero of=.stress/stress iflag=fullblock bs=$( echo $SIZE | cut -c1-$( expr $(echo $SIZE | wc -c) - 6 )  )M count=10 > /dev/null 2>&1
-    echo "dd done"
-  else
-    echo "FATAL: ${MEMDIR} directory is already exists! exited."
-    exit 1
-  fi
-  sleep ${TIMEOUT}
-  umount ${MEMDIR} || ( echo "ERROR: umount ${MEMDIR} failed."; exit 1 )
-  rmdir ${MEMDIR} || ( echo "ERROR: rmdir ${MEMDIR} failed."; exit 1 )
+  ( echo $SIZE; echo ${TIMEOUT} )  | perl -e 'my @arr; my $line = <STDIN>; my $timeout = <STDIN>; $line =~ s/[\D]+//g; print $mem . "\n"; while( $#arr < $line ){ push( @arr, "a" x 1024 ); } sleep $timeout;'
+  echo "stack done"
 
 }
 
@@ -63,8 +51,8 @@ main()
 
   
   UUID=$(uuidgen)
-  cgcreate -g cpu,memory:$UUID
-
+  # cgcreate -g cpu,memory:$UUID
+  mkdir /sys/fs/cgroup/{cpu,memory}/$UUID > /dev/null 2>&1
   case $MODE in
     "-c")
       CPUNUM=$( cat /proc/cpuinfo | grep proce | wc -l )
@@ -93,7 +81,9 @@ main()
       exit 1
       ;;
   esac
-  cgdelete -g cpu,memory:$UUID
+  # cgdelete -g cpu,memory:$UUID
+  rm -rf /sys/fs/cgroup/{cpu,memory}/$UUID > /dev/null 2>&1
+
 }
 
 main $*
