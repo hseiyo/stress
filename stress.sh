@@ -5,10 +5,10 @@ usage()
   echo "usage:"
   echo
   echo "CPU stress"
-  echo "$0 -c -t seconds [percentage]"
+  echo "$0 -c -t seconds percentage"
   echo
   echo "Memory stress"
-  echo "$0 -m -t seconds [percentage]"
+  echo "$0 -m -t seconds percentage"
 }
 
 cpu_stress()
