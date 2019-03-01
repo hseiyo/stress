@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 usage()
 {
@@ -13,7 +13,6 @@ usage()
 
 cpu_stress()
 {
-
   TIMEOUT=$1
   shift
   SECONDS=1
@@ -52,13 +51,20 @@ main()
   
   UUID=$(uuidgen)
   # cgcreate -g cpu,memory:$UUID
-  mkdir /sys/fs/cgroup/{cpu,memory}/$UUID > /dev/null 2>&1
+  for d in cpu memory
+  do
+    mkdir /sys/fs/cgroup/$d/$UUID > /dev/null 2>&1
+  done
   case $MODE in
     "-c")
       CPUNUM=$( cat /proc/cpuinfo | grep proce | wc -l )
-      echo $( expr 1000000 / $CPUNUM ) | tee /sys/fs/cgroup/cpu/$UUID/cpu.cfs_period_us
-      echo $( expr ${PERCENTAGE} \* 10000 ) | tee /sys/fs/cgroup/cpu/$UUID/cpu.cfs_quota_us
-      echo $$ | tee /sys/fs/cgroup/cpu/$UUID/tasks
+      echo $( expr 1000000 / $CPUNUM ) > /sys/fs/cgroup/cpu/$UUID/cpu.cfs_period_us
+      echo $( expr ${PERCENTAGE} \* 10000 ) > /sys/fs/cgroup/cpu/$UUID/cpu.cfs_quota_us
+      echo $$ > /sys/fs/cgroup/cpu/$UUID/tasks
+
+      echo "cpu.cfs_period_us: $(cat /sys/fs/cgroup/cpu/$UUID/cpu.cfs_period_us)"
+      echo "cpu.cfs_quota_us: $(cat /sys/fs/cgroup/cpu/$UUID/cpu.cfs_quota_us)"
+      echo "tasks: $(cat /sys/fs/cgroup/cpu/$UUID/tasks)"
 
       for n in $(seq 1 $CPUNUM )
       do
@@ -69,8 +75,8 @@ main()
     "-m")
       TOTALMEM=$( cat /proc/meminfo | grep MemTotal: | egrep -o "[0-9]+" ) # in kilo byte
       MAXUSEMEM=$( expr ${TOTALMEM} / 100 \* ${PERCENTAGE} )K
-      echo ${MAXUSEMEM} | tee /sys/fs/cgroup/memory/$UUID/memory.limit_in_bytes
-      echo $$ | tee /sys/fs/cgroup/memory/$UUID/tasks
+      echo ${MAXUSEMEM} > /sys/fs/cgroup/memory/$UUID/memory.limit_in_bytes
+      echo $$ > /sys/fs/cgroup/memory/$UUID/tasks
       memory_stress $SEC ${MAXUSEMEM} &
       vmstat 1 $(( $SEC + 2 ))
       wait
@@ -82,8 +88,6 @@ main()
       ;;
   esac
   # cgdelete -g cpu,memory:$UUID
-  rm -rf /sys/fs/cgroup/{cpu,memory}/$UUID > /dev/null 2>&1
-
 }
 
 main $*
