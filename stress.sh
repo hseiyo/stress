@@ -20,6 +20,7 @@ cpu_stress()
   do
     :
   done
+  echo "cpu stress done"
 }
 
 memory_stress()
@@ -28,8 +29,10 @@ memory_stress()
   shift
   SIZE=$1
   shift
-  ( echo $SIZE; echo ${TIMEOUT} )  | perl -e 'my @arr; my $line = <STDIN>; my $timeout = <STDIN>; $line =~ s/[\D]+//g; print $mem . "\n"; while( $#arr < $line ){ push( @arr, "a" x 1024 ); } sleep $timeout;'
-  echo "stack done"
+
+  # perl required
+  ( echo $SIZE; echo ${TIMEOUT} )  | perl -e 'my @arr; my $line = <STDIN>; my $timeout = <STDIN>; $line =~ s/[\D]+//g; print $mem . "\n"; while( $#arr < $line ){ push( @arr, "a" x 1024 ); } print "memory allocated\n"; sleep $timeout;'
+  echo "memory stress done"
 
 }
 
