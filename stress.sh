@@ -45,7 +45,7 @@ main()
     SEC=$1
     shift
   fi
-  PERCENTAGE=$1
+  RATIO=$1
   shift
 
   
@@ -59,7 +59,7 @@ main()
     "-c")
       CPUNUM=$( cat /proc/cpuinfo | grep proce | wc -l )
       echo $( expr 1000000 / $CPUNUM ) > /sys/fs/cgroup/cpu/$UUID/cpu.cfs_period_us
-      echo $( expr ${PERCENTAGE} \* 10000 ) > /sys/fs/cgroup/cpu/$UUID/cpu.cfs_quota_us
+      echo $( expr ${RATIO} \* 10000 ) > /sys/fs/cgroup/cpu/$UUID/cpu.cfs_quota_us
       echo $$ > /sys/fs/cgroup/cpu/$UUID/tasks
 
       echo "cpu.cfs_period_us: $(cat /sys/fs/cgroup/cpu/$UUID/cpu.cfs_period_us)"
@@ -68,13 +68,13 @@ main()
 
       for n in $(seq 1 $CPUNUM )
       do
-        cpu_stress $SEC ${PERCENTAGE} & 
+        cpu_stress $SEC ${RATIO} &
       done
       vmstat 1 $(( $SEC + 2 ))
       ;;
     "-m")
       TOTALMEM=$( cat /proc/meminfo | grep MemTotal: | egrep -o "[0-9]+" ) # in kilo byte
-      MAXUSEMEM=$( expr ${TOTALMEM} / 100 \* ${PERCENTAGE} )K
+      MAXUSEMEM=$( expr ${TOTALMEM} / 100 \* ${RATIO} )K
       echo ${MAXUSEMEM} > /sys/fs/cgroup/memory/$UUID/memory.limit_in_bytes
       echo $$ > /sys/fs/cgroup/memory/$UUID/tasks
       memory_stress $SEC ${MAXUSEMEM} &
