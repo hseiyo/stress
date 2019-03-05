@@ -20,7 +20,7 @@ cpu_stress()
   do
     :
   done
-  echo "cpu stress done"
+  echo "cpu stress per core is done"
 }
 
 memory_stress()
@@ -62,11 +62,11 @@ main()
 
   
   UUID=$(uuidgen)
-  # cgcreate -g cpu,memory:$UUID
   for d in cpu memory
   do
     mkdir /sys/fs/cgroup/$d/$UUID > /dev/null 2>&1
   done
+
   case $MODE in
     "-c")
       CPUNUM=$( cat /proc/cpuinfo | grep proce | wc -l )
@@ -83,6 +83,9 @@ main()
         cpu_stress $SEC ${RATIO} &
       done
       vmstat 1 $(( $SEC + 2 ))
+
+      # write to root cgroup in order to delete cgroup
+      echo $$ > /sys/fs/cgroup/cpu/tasks
       ;;
     "-m")
       TOTALMEM=$( cat /proc/meminfo | grep MemTotal: | egrep -o "[0-9]+" ) # in kilo byte
@@ -91,7 +94,11 @@ main()
       echo $$ > /sys/fs/cgroup/memory/$UUID/tasks
       memory_stress $SEC ${MAXUSEMEM} &
       vmstat 1 $(( $SEC + 2 ))
+      echo "waiting child process: memory_stress()"
       wait
+
+      # write to root cgroup in order to delete cgroup
+      echo $$ > /sys/fs/cgroup/memory/tasks
       echo "done"
       ;;
     *)
@@ -99,7 +106,10 @@ main()
       exit 1
       ;;
   esac
-  # cgdelete -g cpu,memory:$UUID
+  for d in cpu memory
+  do
+    rmdir /sys/fs/cgroup/$d/$UUID > /dev/null 2>&1
+  done
 }
 
 main $*
